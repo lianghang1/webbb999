@@ -18,6 +18,8 @@ import {
   NButtonGroup,
   NCard,
   NProgress,
+  NRadioButton,
+  NRadioGroup,
   NSelect,
   NSpin,
   NSwitch,
@@ -63,6 +65,14 @@ const stats = ref<CemeteryParkStats | null>(null);
 const selectedSection = ref<CemeterySection | null>(null);
 const statusFilter = ref('');
 const scale = ref(1);
+/** 展示模式：图标（墓碑）/ 信息（状态）/ 价格 */
+const viewMode = ref<'icon' | 'info' | 'price'>('icon');
+
+const viewModeOptions = [
+  { label: '图标', value: 'icon' },
+  { label: '信息', value: 'info' },
+  { label: '价格', value: 'price' },
+];
 
 const treeOptions = computed<TreeOption[]>(() => {
   // 每个墓区的直接格位数（用于树节点统计徽章，父节点含子孙合计）
@@ -87,9 +97,12 @@ const treeOptions = computed<TreeOption[]>(() => {
   }
   const roots: TreeOption[] = [];
   for (const section of sections.value) {
-    const node = nodeMap.get(section.id)!;
-    if (section.parentId && nodeMap.has(section.parentId)) {
-      const parent = nodeMap.get(section.parentId)!;
+    const node = nodeMap.get(section.id);
+    if (!node) {
+      continue;
+    }
+    const parent = section.parentId ? nodeMap.get(section.parentId) : undefined;
+    if (parent) {
       parent.children = parent.children ?? [];
       parent.children.push(node);
     } else {
@@ -122,8 +135,8 @@ const coordExtent = computed(() => {
   if (!coordinateMode.value) {
     return null;
   }
-  const xs = plots.value.map((p) => p.posX!);
-  const ys = plots.value.map((p) => p.posY!);
+  const xs = plots.value.map((p) => p.posX ?? 0);
+  const ys = plots.value.map((p) => p.posY ?? 0);
   const minX = Math.min(...xs);
   const minY = Math.min(...ys);
   return {
@@ -149,13 +162,21 @@ function isDimmedCoord(plot: CemeteryPlot): boolean {
   return !filteredKeys.value.has(`${plot.row}-${plot.col}`);
 }
 
-const maxRow = computed(() =>
-  plots.value.reduce((max, item) => Math.max(max, item.row), 0),
-);
+const maxRow = computed(() => {
+  let max = 0;
+  for (const item of plots.value) {
+    max = Math.max(max, item.row);
+  }
+  return max;
+});
 
-const maxCol = computed(() =>
-  plots.value.reduce((max, item) => Math.max(max, item.col), 0),
-);
+const maxCol = computed(() => {
+  let max = 0;
+  for (const item of plots.value) {
+    max = Math.max(max, item.col);
+  }
+  return max;
+});
 
 const plotMap = computed(() => {
   const map = new Map<string, CemeteryPlot>();
@@ -374,84 +395,6 @@ watch(
 
 <template>
   <Page title="格位总览">
-    <!-- 全局 SVG 图案定义（斜纹 = 在建脚手架感；渐变 = 碑身立体感） -->
-    <svg height="0" style="position: absolute" width="0">
-      <defs>
-        <pattern
-          id="plot-stripes"
-          pattern-transform="rotate(45)"
-          pattern-units="userSpaceOnUse"
-          width="6"
-          height="6"
-        >
-          <rect fill="#fadb14" height="6" width="6" />
-          <rect fill="#e2c406" height="6" width="3" />
-        </pattern>
-        <linearGradient id="grad-idle" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#8ce99a" />
-          <stop offset="1" stop-color="#37b24d" />
-        </linearGradient>
-        <linearGradient id="grad-reserved" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#ffd8a8" />
-          <stop offset="1" stop-color="#ed8b2d" />
-        </linearGradient>
-        <linearGradient id="grad-sold" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#a5d8ff" />
-          <stop offset="1" stop-color="#1c7ed6" />
-        </linearGradient>
-        <linearGradient id="grad-occupied" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#d0bfff" />
-          <stop offset="1" stop-color="#7048e8" />
-        </linearGradient>
-        <linearGradient id="grad-maintenance" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#ffc9c9" />
-          <stop offset="1" stop-color="#f03e3e" />
-        </linearGradient>
-        <!-- 石材渐变（统一碑框：芝麻灰/汉白玉） -->
-        <linearGradient id="grad-stone" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#f4f2ed" />
-          <stop offset="1" stop-color="#d8d4cc" />
-        </linearGradient>
-        <!-- 黑花岗岩渐变（墓碑主体：山西黑） -->
-        <linearGradient id="grad-blackstone" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#4a5058" />
-          <stop offset="1" stop-color="#1e2228" />
-        </linearGradient>
-        <!-- 警示纹（维护中叠加在内容色块上） -->
-        <pattern
-          id="warn-stripes"
-          pattern-transform="rotate(45)"
-          pattern-units="userSpaceOnUse"
-          width="6"
-          height="6"
-        >
-          <rect fill="transparent" height="6" width="6" />
-          <rect fill="rgba(250, 82, 82, 0.55)" height="3" width="6" />
-        </pattern>
-        <!-- 柔和底块渐变（格位融合版：底色=流转状态） -->
-        <linearGradient id="grad-soft-idle" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#d9f4df" />
-          <stop offset="1" stop-color="#a9e2b6" />
-        </linearGradient>
-        <linearGradient id="grad-soft-reserved" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#ffedd4" />
-          <stop offset="1" stop-color="#ffc591" />
-        </linearGradient>
-        <linearGradient id="grad-soft-sold" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#dbeeff" />
-          <stop offset="1" stop-color="#91c9f5" />
-        </linearGradient>
-        <linearGradient id="grad-soft-occupied" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#e8dcff" />
-          <stop offset="1" stop-color="#c3adff" />
-        </linearGradient>
-        <linearGradient id="grad-soft-maintenance" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#ffdcdc" />
-          <stop offset="1" stop-color="#ffadad" />
-        </linearGradient>
-      </defs>
-    </svg>
-
     <div class="flex flex-col gap-3">
       <!-- 园区总览横幅（大屏风） -->
       <NCard class="stats-banner" size="small">
@@ -509,7 +452,7 @@ watch(
         <NCard
           content-style="height: 600px; overflow: auto;"
           size="small"
-          style=" flex-shrink: 0;width: 260px"
+          style="flex-shrink: 0; width: 260px"
           title="墓区"
         >
           <NSpin :show="loading">
@@ -529,7 +472,7 @@ watch(
         <NCard
           content-style="height: 600px; overflow: auto;"
           size="small"
-          style=" flex: 1 1 0;min-width: 0"
+          style="flex: 1 1 0; min-width: 0"
         >
           <template #header>
             {{
@@ -543,6 +486,14 @@ watch(
               <NButton size="small" type="primary" @click="goParkView">
                 3D 导览
               </NButton>
+              <NRadioGroup v-model:value="viewMode" size="small">
+                <NRadioButton
+                  v-for="opt in viewModeOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </NRadioGroup>
               <NSelect
                 v-model:value="statusFilter"
                 :options="statusFilterOptions"
@@ -572,7 +523,7 @@ watch(
                 background:
                   statusFilter === key
                     ? `${BUILD_CELL[key]?.bg ?? SALE_CELL[key]?.bg}30`
-                    : 'rgba(255,255,255,0.04)',
+                    : '#ffffff',
               }"
               @click="toggleLegendFilter(key)"
             >
@@ -605,7 +556,10 @@ watch(
               <span class="text-xs opacity-75">{{ tier.label }}</span>
             </div>
 
-            <div class="ml-auto flex items-center gap-1.5">
+            <div
+              v-if="viewMode === 'icon'"
+              class="ml-auto flex items-center gap-1.5"
+            >
               <span class="text-xs opacity-60">价格牌</span>
               <NSwitch v-model:value="showPrice" size="small" />
             </div>
@@ -633,7 +587,8 @@ watch(
                   :plot-type-name="plotTypeMap.get(plot.typeId) ?? '-'"
                   :position-style="coordPositionStyle(plot)"
                   :rotate="plot.rotation ?? 0"
-                  :show-price="showPriceEffective"
+                  :show-price="viewMode === 'icon' && showPriceEffective"
+                  :view-mode="viewMode"
                   @click="openDetail(plot)"
                 />
               </div>
@@ -678,7 +633,8 @@ watch(
                             getPlot(rowIndex, colIndex)?.typeId ?? '',
                           ) ?? '-'
                         "
-                        :show-price="showPriceEffective"
+                        :show-price="viewMode === 'icon' && showPriceEffective"
+                        :view-mode="viewMode"
                         @click="
                           openDetail(
                             getPlot(rowIndex, colIndex) as CemeteryPlot,
@@ -704,12 +660,8 @@ watch(
 
 <style scoped>
 .stats-banner {
-  background: linear-gradient(
-    120deg,
-    rgb(24 36 58 / 92%),
-    rgb(12 20 34 / 92%)
-  );
-  border: 1px solid rgb(92 146 255 / 26%);
+  background: linear-gradient(120deg, #f0f5ff 0%, #e6f4ff 100%);
+  border: 1px solid #d6e4ff;
   border-radius: 12px;
 }
 
@@ -717,12 +669,11 @@ watch(
   font-size: 22px;
   font-weight: 700;
   line-height: 1.15;
-  text-shadow: 0 0 14px rgb(110 160 255 / 40%);
 }
 
 .stat-label {
   font-size: 11px;
-  color: #8a95ab;
+  color: #8c8c8c;
   white-space: nowrap;
 }
 
@@ -733,14 +684,20 @@ watch(
   padding: 3px 10px;
   cursor: pointer;
   user-select: none;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid #d9d9d9;
   border-radius: 999px;
   transition: background 0.15s ease;
 }
 
+.legend-pill.active {
+  background: #e6f7ff;
+  border-color: #1890ff;
+}
+
 .map-viewport {
-  max-height: 540px;
+  max-height: 560px;
   overflow: auto;
+  background: #fafafa;
   border-radius: 10px;
 }
 
@@ -748,57 +705,57 @@ watch(
   position: relative;
   display: inline-block;
   min-width: 100%;
-  padding: 14px;
+  padding: 16px;
   background:
-    linear-gradient(rgb(96 150 255 / 5%) 1px, transparent 1px) 0 0 / 100%
-      22px,
-    linear-gradient(90deg, rgb(96 150 255 / 5%) 1px, transparent 1px) 0 0 /
-      22px 100%,
-    linear-gradient(180deg, #0e1726 0%, #0a1120 100%);
-  border: 1px solid rgb(92 146 255 / 22%);
+    linear-gradient(rgb(0 0 0 / 2%) 1px, transparent 1px) 0 0 / 100% 22px,
+    linear-gradient(90deg, rgb(0 0 0 / 2%) 1px, transparent 1px) 0 0 / 22px 100%,
+    #fafbfc;
+  border: 1px solid #e8e8e8;
   border-radius: 10px;
   transform-origin: top left;
 }
 
 .map-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .map-band--road {
-  padding-top: 12px;
-  margin-top: 16px;
-  border-top: 1px dashed rgb(140 140 140 / 30%);
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1.5px solid #d9d9d9;
 }
 
 .row-ruler {
   flex-shrink: 0;
   width: 34px;
-  font-size: 11px;
-  line-height: 52px;
+  font-size: 10px;
+  line-height: 48px;
+  color: #8c8c8c;
   text-align: center;
   user-select: none;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .col-ruler {
   flex-shrink: 0;
   width: 56px;
-  font-size: 11px;
+  font-size: 10px;
+  color: #8c8c8c;
   text-align: center;
   user-select: none;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .plot-slot {
   position: relative;
   z-index: 0;
   width: 56px;
-  height: 52px;
+  height: 48px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 5px;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -806,17 +763,17 @@ watch(
 
 .plot-slot:hover {
   z-index: 2;
-  box-shadow: 0 6px 14px rgb(0 0 0 / 30%);
-  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  transform: translateY(-1px);
 }
 
 .plot-slot--dimmed {
-  opacity: 0.18;
+  opacity: 0.15;
 }
 
 .plot-slot--empty {
   cursor: default;
-  background: repeating-conic-gradient(#f8f8f8 0% 25%, transparent 0% 50%);
-  border: 1px dashed #eee;
+  background: repeating-conic-gradient(#fafafa 0% 25%, transparent 0% 50%);
+  border: 1px dashed #d9d9d9;
 }
 </style>

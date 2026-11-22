@@ -3,24 +3,32 @@ import type { CemeteryPlot } from '#/api/cemetery/types';
 
 import { computed } from 'vue';
 
-/**
- * 格位图形组件（融合版）：
- * - 底块 = 流转状态柔和色（信息主通道，参照专业系统的色块+编号语言）
- * - 碑影 = 统一半透明白色墓碑剪影（小、恒定，不随状态变化）
- * - 编号 = 排-号（底部深色文字）
- * - 建造状态：未建 = 无底色虚线地块（无碑影无编号）；在建 = 底块加工地斜纹；
- *   建成 = 实底
- * 渐变定义在 index.vue 全局 defs（grad-soft-*）。
- */
-const props = defineProps<{ plot: CemeteryPlot }>();
+import { cellColor, priceWan } from './plot-status';
 
-/** 底块柔和色（流转状态） */
-const SOFT_COLORS: Record<string, [string, string]> = {
-  idle: ['#d9f4df', '#a9e2b6'],
-  maintenance: ['#ffdcdc', '#ffadad'],
-  occupied: ['#e8dcff', '#c3adff'],
-  reserved: ['#ffedd4', '#ffc591'],
-  sold: ['#dbeeff', '#91c9f5'],
+/**
+ * 格位图形组件（原创设计）：
+ * - 图标模式：统一几何墓碑（拱顶碑身 + 碑顶圆章 + 刻字条 + 底座），
+ *   填充色 = 流转状态，刻字条数量 = 穴数。
+ * - 信息模式：状态柔和底块 + 编号 + 状态文案。
+ * - 价格模式：状态柔和底块 + 价格（万元）+ 编号。
+ */
+const props = withDefaults(
+  defineProps<{
+    plot: CemeteryPlot;
+    /** 展示模式：图标（墓碑）/ 信息（状态文字）/ 价格 */
+    viewMode?: 'icon' | 'info' | 'price';
+  }>(),
+  { viewMode: 'icon' },
+);
+
+/** 状态 → 碑身填充色（自配色板，中饱和度保证白色刻字条可读） */
+const FILL: Record<string, string> = {
+  idle: '#51cf66',
+  reserved: '#ffa94d',
+  sold: '#4dabf7',
+  occupied: '#9775fa',
+  maintenance: '#ff6b6b',
+  building: '#fcc419',
 };
 
 const cellKey = computed(() => {
@@ -33,122 +41,173 @@ const cellKey = computed(() => {
   return props.plot.saleStatus === 'none' ? 'idle' : props.plot.saleStatus;
 });
 
-const softFill = computed(() => {
-  const pair = SOFT_COLORS[cellKey.value];
-  return pair ? `url(#grad-soft-${cellKey.value})` : 'transparent';
+const fill = computed(() => FILL[cellKey.value] ?? '#adb5bd');
+const isUnbuilt = computed(() => cellKey.value === 'unbuilt');
+const statusColor = computed(() => cellColor(props.plot));
+
+/** 刻字条数量 = 穴数（单穴 1 / 双穴 2 / 多穴 3） */
+const barCount = computed(() => {
+  const n = Number(props.plot.cryptCount ?? 1);
+  if (n >= 4) return 3;
+  if (n === 2) return 2;
+  return 1;
 });
 
-const statusText = computed(() => {
-  if (cellKey.value === 'building') {
-    return '建';
-  }
-  if (cellKey.value === 'unbuilt') {
-    return '';
-  }
-  // 已售/已安葬 用「售/葬」区分流转深度
-  if (cellKey.value === 'sold') {
-    return '售';
-  }
-  if (cellKey.value === 'occupied') {
-    return '葬';
-  }
-  if (cellKey.value === 'maintenance') {
-    return '维';
-  }
-  if (cellKey.value === 'reserved') {
-    return '订';
-  }
-  return '售';
+/** 刻字条 y 坐标（1/2/3 条三种排布） */
+const BAR_Y: Record<number, number[]> = {
+  1: [16.5],
+  2: [14.5, 18.5],
+  3: [13, 16.5, 20],
+};
+
+const priceText = computed(() => {
+  const wan = priceWan(props.plot.price);
+  return wan ?? '未定价';
 });
 </script>
 
 <template>
-  <svg class="plot-svg" viewBox="0 0 56 52">
-    <!-- 未建：虚线空地块 -->
-    <template v-if="cellKey === 'unbuilt'">
-      <rect
-        fill="transparent"
-        height="44"
-        rx="4"
-        stroke="#868e96"
-        stroke-dasharray="5 4"
-        stroke-width="1.2"
-        width="48"
-        x="4"
-        y="4"
-      />
-      <rect
-        fill="#868e96"
-        height="3"
-        opacity="0.4"
-        rx="1.2"
-        width="10"
-        x="23"
-        y="24"
-      />
+  <div
+    class="plot-cell"
+    :class="[
+      { 'plot-cell--unbuilt': isUnbuilt },
+      viewMode !== 'icon' ? 'plot-cell--block' : '',
+    ]"
+    :style="
+      viewMode !== 'icon' && !isUnbuilt
+        ? {
+            background: `${statusColor.bg}1f`,
+            borderColor: statusColor.bg,
+          }
+        : undefined
+    "
+  >
+    <!-- 未建：虚线空地 -->
+    <div v-if="isUnbuilt" class="unbuilt-box">
+      <span class="unbuilt-text">
+        {{ viewMode === 'price' ? '—' : '未建' }}
+      </span>
+    </div>
+
+    <!-- 图标模式：统一几何墓碑图标 -->
+    <template v-else-if="viewMode === 'icon'">
+      <svg class="tombstone" viewBox="0 0 28 30">
+        <!-- 底座 -->
+        <rect
+          fill="rgba(0,0,0,0.22)"
+          height="3"
+          rx="1"
+          width="20"
+          x="4"
+          y="26.5"
+        />
+        <!-- 碑身（拱顶几何形） -->
+        <path
+          :fill="fill"
+          d="M 7 26.5 L 7 9.5 Q 7 4 14 4 Q 21 4 21 9.5 L 21 26.5 Z"
+        />
+        <!-- 碑顶圆章（装饰性雕章） -->
+        <circle cx="14" cy="9.5" fill="rgba(255,255,255,0.45)" r="1.9" />
+        <!-- 刻字条（数量 = 穴数） -->
+        <rect
+          v-for="(y, i) in BAR_Y[barCount]"
+          :key="i"
+          fill="rgba(255,255,255,0.55)"
+          height="1.8"
+          rx="0.9"
+          width="10"
+          x="9"
+          :y="y"
+        />
+      </svg>
+      <span class="plot-code">{{ plot.row }}-{{ plot.col }}</span>
     </template>
 
-    <template v-else>
-      <!-- 底块：流转状态柔和色 -->
-      <rect
-        :fill="softFill"
-        height="44"
-        rx="5"
-        stroke="rgba(0,0,0,0.14)"
-        stroke-width="0.8"
-        width="48"
-        x="4"
-        y="4"
-      />
-      <!-- 在建：工地斜纹叠加 -->
-      <rect
-        v-if="cellKey === 'building'"
-        fill="url(#plot-stripes)"
-        height="44"
-        opacity="0.55"
-        rx="5"
-        width="48"
-        x="4"
-        y="4"
-      />
-      <!-- 统一碑影（白色半透明剪影，不随状态变化） -->
-      <g fill="rgba(255,255,255,0.6)">
-        <rect height="3" rx="1" width="16" x="20" y="30" />
-        <rect height="2.6" rx="1" width="13" x="21.5" y="27" />
-        <path d="M24 27 L24 15.5 Q24 11.5 28 11.5 Q32 11.5 32 15.5 L32 27 Z" />
-        <rect height="1.8" rx="0.9" width="6" x="25" y="14.5" />
-        <rect height="1.8" rx="0.9" width="6" x="25" y="17.5" />
-      </g>
-      <!-- 状态字角标（右上，小） -->
-      <text
-        fill="rgba(0,0,0,0.45)"
-        font-size="9"
-        font-weight="bold"
-        text-anchor="middle"
-        x="46"
-        y="13"
-      >
-        {{ statusText }}
-      </text>
-      <!-- 编号（排-号） -->
-      <text
-        fill="rgba(20, 30, 50, 0.72)"
-        font-size="11"
-        font-weight="600"
-        text-anchor="middle"
-        x="28"
-        y="45"
-      >
-        {{ plot.row }}-{{ plot.col }}
-      </text>
+    <!-- 信息模式：编号 + 状态文案 -->
+    <template v-else-if="viewMode === 'info'">
+      <span class="block-code">{{ plot.row }}-{{ plot.col }}</span>
+      <span class="block-sub" :style="{ color: statusColor.text }">
+        {{ statusColor.label }}
+      </span>
     </template>
-  </svg>
+
+    <!-- 价格模式：价格 + 编号 -->
+    <template v-else>
+      <span class="block-code" :style="{ color: '#e8590c' }">
+        {{ priceText }}
+      </span>
+      <span class="block-sub">{{ plot.row }}-{{ plot.col }}</span>
+    </template>
+  </div>
 </template>
 
 <style scoped>
-.plot-svg {
-  display: block;
+.plot-cell {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 56px;
-  height: 52px;
+  height: 48px;
+  overflow: hidden;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 0;
+  border-radius: 5px;
+}
+
+.plot-cell--block {
+  border-width: 1.5px;
+}
+
+.plot-cell--unbuilt {
+  cursor: default;
+  border: 1.5px dashed #ced4da;
+}
+
+.tombstone {
+  display: block;
+  width: 28px;
+  height: 30px;
+}
+
+.plot-code {
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: #495057;
+  user-select: none;
+}
+
+.block-code {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  user-select: none;
+}
+
+.block-sub {
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1.2;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.unbuilt-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.unbuilt-text {
+  font-size: 10px;
+  color: #adb5bd;
+  user-select: none;
 }
 </style>

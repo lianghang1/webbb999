@@ -9,7 +9,7 @@ import PlotCell from './plot-cell.vue';
 import { cellColor, priceWan, statusTagType } from './plot-status';
 
 /**
- * 格位标记：石碑图形 + 价格牌（可选）+ hover 信息卡（玻璃拟态）。
+ * 格位标记：几何墓碑图标 + 价格牌（可选）+ hover 信息卡。
  * 网格模式走文档流；坐标模式通过 positionStyle 传 left/top 绝对定位。
  */
 defineProps<{
@@ -22,16 +22,18 @@ defineProps<{
   showPrice?: boolean;
   /** 朝向旋转（度） */
   rotate?: number;
+  /** 展示模式：图标 / 信息 / 价格 */
+  viewMode?: 'icon' | 'info' | 'price';
 }>();
 
 const emit = defineEmits<{ click: [] }>();
 
 const GLASS_STYLE = {
-  background: 'rgba(16, 24, 38, 0.88)',
+  background: 'rgba(255, 255, 255, 0.94)',
   backdropFilter: 'blur(10px)',
-  border: '1px solid rgba(120, 180, 255, 0.28)',
+  border: '1px solid rgba(0, 0, 0, 0.08)',
   borderRadius: '10px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)',
 };
 </script>
 
@@ -48,7 +50,7 @@ const GLASS_STYLE = {
           class="plot-marker-inner"
           :style="rotate ? { transform: `rotate(${rotate}deg)` } : undefined"
         >
-          <PlotCell :plot="plot" />
+          <PlotCell :plot="plot" :view-mode="viewMode" />
         </div>
         <div v-if="showPrice && plot.price" class="price-badge">
           {{ priceWan(plot.price) }}
@@ -84,7 +86,7 @@ const GLASS_STYLE = {
       </div>
       <div
         class="mt-2 pt-1.5 text-right text-[10px] opacity-50"
-        style="border-top: 1px solid rgb(128 128 128 / 30%)"
+        style="border-top: 1px solid rgb(0 0 0 / 8%)"
       >
         点击查看详情与操作
       </div>
@@ -108,7 +110,7 @@ const GLASS_STYLE = {
 
 .plot-slot:hover {
   z-index: 2;
-  box-shadow: 0 6px 14px rgb(0 0 0 / 35%);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 15%);
   transform: translateY(-2px) scale(1.08);
 }
 
@@ -125,10 +127,10 @@ const GLASS_STYLE = {
   margin-top: 1px;
   font-size: 10px;
   line-height: 1.25;
-  color: #ffd54a;
+  color: #e8590c;
   white-space: nowrap;
-  background: rgb(10 18 30 / 72%);
-  border: 1px solid rgb(255 213 74 / 32%);
+  background: rgb(255 244 230 / 92%);
+  border: 1px solid rgb(232 89 12 / 28%);
   border-radius: 4px;
 }
 </style>
