@@ -22,6 +22,8 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
+import ParkSwitcher from './components/park-switcher.vue';
+
 const notifications = ref<NotificationItem[]>([
   {
     id: 1,
@@ -223,6 +225,9 @@ watch(
     @clear-preferences-and-logout="handleLogout"
     @logout="handleLogout"
   >
+    <template #header-right-1>
+      <ParkSwitcher />
+    </template>
     <template #user-dropdown>
       <UserDropdown
         :avatar

@@ -1,0 +1,13 @@
+{
+  "title": "陵园管理",
+  "plotMap": "格位总览",
+  "parkView": "3D 导览",
+  "parks": "园区管理",
+  "sections": "墓区管理",
+  "plotTypes": "墓型管理",
+  "prices": "价目管理",
+  "customers": "客户管理",
+  "sales": "销售管理",
+  "deceased": "逝者档案",
+  "burials": "安葬管理"
+}
