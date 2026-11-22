@@ -54,9 +54,11 @@ export function updatePrice(
   data: Partial<Omit<MockPrice, 'createTime' | 'id'>>,
 ) {
   const index = prices.findIndex((item) => item.id === id);
-  if (index === -1) return null;
-  prices[index] = { ...prices[index]!, ...data };
-  return prices[index];
+  const prev = prices[index];
+  if (index === -1 || !prev) return null;
+  const updated: MockPrice = { ...prev, ...data };
+  prices[index] = updated;
+  return updated;
 }
 
 export function deletePrice(id: string) {
@@ -100,9 +102,11 @@ export function updateCustomer(
   data: Partial<Omit<MockCustomer, 'createTime' | 'id'>>,
 ) {
   const index = customers.findIndex((item) => item.id === id);
-  if (index === -1) return null;
-  customers[index] = { ...customers[index]!, ...data };
-  return customers[index];
+  const prev = customers[index];
+  if (index === -1 || !prev) return null;
+  const updated: MockCustomer = { ...prev, ...data };
+  customers[index] = updated;
+  return updated;
 }
 
 export function deleteCustomer(id: string) {
@@ -146,9 +150,11 @@ export function updateDeceased(
   data: Partial<Omit<MockDeceased, 'createTime' | 'id'>>,
 ) {
   const index = deceasedList.findIndex((item) => item.id === id);
-  if (index === -1) return null;
-  deceasedList[index] = { ...deceasedList[index]!, ...data };
-  return deceasedList[index];
+  const prev = deceasedList[index];
+  if (index === -1 || !prev) return null;
+  const updated: MockDeceased = { ...prev, ...data };
+  deceasedList[index] = updated;
+  return updated;
 }
 
 export function deleteDeceased(id: string) {
@@ -206,6 +212,13 @@ export function findSaleById(id: string) {
 
 export function getPaymentsByOrder(orderId: string) {
   return payments.filter((item) => item.orderId === orderId);
+}
+
+/** 取格位最新一笔有效销售单（退购单除外），无则返回 undefined */
+export function findSaleByPlotLatest(plotId: string) {
+  return sales.find(
+    (item) => item.plotId === plotId && item.status !== 'refunded',
+  );
 }
 
 export function createSale(data: {
@@ -339,6 +352,122 @@ export function getBurialsByPark(parkId: string) {
   return burials.filter((item) => item.parkId === parkId);
 }
 
+/** 取格位最新一条安葬登记 */
+export function findBurialByPlotLatest(plotId: string) {
+  return burials.find((item) => item.plotId === plotId);
+}
+
+// ---------------------------------------------------------------- 维护费缴纳
+
+/** 维护费（管理费）缴纳记录：按缴费周期一次一缴 */
+export interface MockMaintenanceFee {
+  id: string;
+  orderId?: string;
+  plotId: string;
+  cycleYears: number;
+  amount: number;
+  method: 'alipay' | 'bank' | 'cash' | 'wechat';
+  paidAt: string;
+  receiptNo: string;
+}
+
+const maintenanceFees: MockMaintenanceFee[] = [];
+
+export function getMaintenanceFees() {
+  return maintenanceFees;
+}
+
+export function getMaintenanceFeesByPlot(plotId: string) {
+  return maintenanceFees
+    .filter((item) => item.plotId === plotId)
+    .toSorted((a, b) => (a.paidAt < b.paidAt ? 1 : -1));
+}
+
+export function createMaintenanceFee(
+  data: Omit<MockMaintenanceFee, 'id' | 'paidAt' | 'receiptNo'>,
+) {
+  const item: MockMaintenanceFee = {
+    ...data,
+    id: createId(),
+    paidAt: now(),
+    receiptNo: `GL${Date.now()}`,
+  };
+  maintenanceFees.unshift(item);
+  return item;
+}
+
+// ---------------------------------------------------------------- 售后工单
+
+export type AfterSaleStatus = 'completed' | 'pending' | 'processing';
+export type AfterSaleType = 'clean' | 'green' | 'other' | 'stone';
+
+export interface MockAfterSale {
+  id: string;
+  orderNo: string;
+  parkId: string;
+  plotId: string;
+  type: AfterSaleType;
+  status: AfterSaleStatus;
+  description: string;
+  handler?: string;
+  reportAt: string;
+  completeAt?: string;
+}
+
+const afterSales: MockAfterSale[] = [];
+let afterSaleSeq = 100;
+
+export function getAfterSales() {
+  return afterSales;
+}
+
+export function findAfterSaleById(id: string) {
+  return afterSales.find((item) => item.id === id);
+}
+
+export function createAfterSale(
+  data: Omit<
+    MockAfterSale,
+    'completeAt' | 'id' | 'orderNo' | 'reportAt' | 'status'
+  >,
+) {
+  afterSaleSeq += 1;
+  const item: MockAfterSale = {
+    ...data,
+    id: createId(),
+    orderNo: `SH${new Date().getFullYear()}-${afterSaleSeq}`,
+    status: 'pending',
+    reportAt: now(),
+  };
+  afterSales.unshift(item);
+  return item;
+}
+
+export function updateAfterSale(
+  id: string,
+  data: Partial<
+    Pick<MockAfterSale, 'description' | 'handler' | 'status' | 'type'>
+  >,
+) {
+  const index = afterSales.findIndex((item) => item.id === id);
+  const prev = afterSales[index];
+  if (index === -1 || !prev) return null;
+  const updated: MockAfterSale = { ...prev, ...data };
+  afterSales[index] = updated;
+  return updated;
+}
+
+export function completeAfterSale(id: string, handler?: string) {
+  const item = findAfterSaleById(id);
+  if (!item) return null;
+  item.status = 'completed';
+  item.completeAt = now();
+  if (handler) {
+    item.handler = handler;
+  }
+  return item;
+}
+
 // ---------------------------------------------------------------- 业务种子
 
 /** 业务种子：在 cemetery-store 初始化后调用一次（biz 依赖 cemetery 数据） */
@@ -434,8 +563,9 @@ export function seedBizData() {
   // 样例销售单：挑已预订/已售的格位反向生成单据（保持数据一致）
   const reservedPlots = builtPlots.filter((p) => p.saleStatus === 'reserved');
   const soldPlots = builtPlots.filter((p) => p.saleStatus === 'sold');
-  const customer0 = customers[0]!;
-  const customer1 = customers[1]!;
+  const customer0 = customers[0];
+  const customer1 = customers[1];
+  if (!customer0 || !customer1) return;
   for (const plot of reservedPlots) {
     createSale({
       customerId: customer1.id,
@@ -460,6 +590,108 @@ export function seedBizData() {
       amount: Math.round((plot.price ?? 46_800) * 0.6),
       method: 'bank',
     });
+  }
+
+  // 已安葬格位：补全业务闭环（签约销售单 → 全款 → 完成安葬 → 维护费首缴）
+  const occupiedPlots = builtPlots.filter((p) => p.saleStatus === 'occupied');
+  const deceasedAll = getDeceasedList();
+  for (const [i, plot] of occupiedPlots.entries()) {
+    const total = plot.price ?? 46_800;
+    const order = createSale({
+      customerId: customer0.id,
+      deposit: Math.round(total * 0.2),
+      parkId: plot.parkId,
+      plotId: plot.id,
+    });
+    signSale(order.id, `HT${new Date().getFullYear()}-${1000 + i}`, total);
+    addPayment(order.id, { amount: Math.round(total * 0.6), method: 'bank' });
+    const paidSoFar = Math.round(total * 0.2) + Math.round(total * 0.6);
+    addPayment(order.id, { amount: total - paidSoFar, method: 'bank' });
+    createMaintenanceFee({
+      orderId: order.id,
+      plotId: plot.id,
+      cycleYears: 20,
+      amount: Math.round(total * 0.02),
+      method: 'bank',
+    });
+    const deceased = deceasedAll[i % deceasedAll.length];
+    if (!deceased) continue;
+    const burial = createBurial({
+      burialDate: `2025-0${(i % 6) + 1}-1${(i % 9) + 1}`,
+      customerId: customer0.id,
+      deceasedId: deceased.id,
+      parkId: plot.parkId,
+      plotId: plot.id,
+    });
+    completeBurial(burial.id);
+  }
+
+  // 维护费记录：已售格位生成首期缴费（20 年周期）
+  for (const order of getSales().filter((item) => item.status === 'signed')) {
+    const plot = builtPlots.find((p) => p.id === order.plotId);
+    if (!plot) continue;
+    const existed = maintenanceFees.some((fee) => fee.plotId === plot.id);
+    if (!existed) {
+      createMaintenanceFee({
+        orderId: order.id,
+        plotId: plot.id,
+        cycleYears: 20,
+        amount: Math.round((plot.price ?? 46_800) * 0.02),
+        method: 'bank',
+      });
+    }
+  }
+
+  // 售后工单：围绕已安葬/维护中格位生成样例
+  const afterSaleSeeds = [
+    {
+      description: '碑体表面开裂，需要修补抛光',
+      type: 'stone' as const,
+      status: 'processing' as const,
+      handler: '张卫士',
+    },
+    {
+      description: '穴位周边绿化枯死，补种冬青',
+      type: 'green' as const,
+      status: 'pending' as const,
+    },
+    {
+      description: '碑前祭扫残留物清理',
+      type: 'clean' as const,
+      status: 'completed' as const,
+      handler: '李保洁',
+    },
+    {
+      description: '底座松动倾斜，重新加固',
+      type: 'stone' as const,
+      status: 'completed' as const,
+      handler: '张卫士',
+    },
+    {
+      description: '客户申请更换仿真花，代为布置',
+      type: 'other' as const,
+      status: 'pending' as const,
+    },
+  ];
+  const targetPlots = builtPlots.filter(
+    (p) => p.saleStatus === 'occupied' || p.saleStatus === 'maintenance',
+  );
+  for (const [i, seed] of afterSaleSeeds.entries()) {
+    const plot = targetPlots[(i * 3 + 1) % Math.max(targetPlots.length, 1)];
+    if (!plot) break;
+    const item = createAfterSale({
+      parkId: plot.parkId,
+      plotId: plot.id,
+      type: seed.type,
+      description: seed.description,
+      handler: seed.handler,
+    });
+    if (seed.status !== 'pending') {
+      updateAfterSale(item.id, { status: seed.status });
+      if (seed.status === 'completed') {
+        completeAfterSale(item.id, seed.handler);
+      }
+    }
   }
 }
 

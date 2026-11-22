@@ -102,6 +102,15 @@ const routes: RouteRecordRaw[] = [
           title: $t('cemetery.burials'),
         },
       },
+      {
+        name: 'CemeteryAfterSales',
+        path: 'after-sales',
+        component: () => import('#/views/cemetery/after-sales/index.vue'),
+        meta: {
+          icon: 'lucide:wrench',
+          title: $t('cemetery.afterSales'),
+        },
+      },
     ],
   },
 ];

@@ -1,3 +1,5 @@
+import type { CemeteryPlot } from './types';
+
 import { requestClient } from '#/api/request';
 
 // ---------------------------------------------------------------- 价目
@@ -269,4 +271,107 @@ export function cryptCountLabel(count?: number): string {
     return '双穴';
   }
   return `${count}穴（多穴）`;
+}
+
+// ---------------------------------------------------------------- 售后工单
+
+export type AfterSaleStatus = 'completed' | 'pending' | 'processing';
+export type AfterSaleType = 'clean' | 'green' | 'other' | 'stone';
+
+export interface CemeteryAfterSale {
+  completeAt?: string;
+  description: string;
+  handler?: string;
+  id: string;
+  orderNo: string;
+  parkId: string;
+  plotCode?: string;
+  plotId: string;
+  reportAt: string;
+  status: AfterSaleStatus;
+  type: AfterSaleType;
+}
+
+export function getAfterSaleListApi(params: {
+  keyword?: string;
+  parkId?: string;
+  status?: string;
+}) {
+  return requestClient.get<CemeteryAfterSale[]>('/cemetery/aftersales/list', {
+    params,
+  });
+}
+
+export function createAfterSaleApi(data: {
+  description: string;
+  handler?: string;
+  parkId?: string;
+  plotId: string;
+  type: AfterSaleType;
+}) {
+  return requestClient.post<CemeteryAfterSale>('/cemetery/aftersales', data);
+}
+
+export function updateAfterSaleApi(
+  id: string,
+  data: {
+    description?: string;
+    handler?: string;
+    status?: AfterSaleStatus;
+    type?: AfterSaleType;
+  },
+) {
+  return requestClient.put<CemeteryAfterSale>(
+    `/cemetery/aftersales/${id}`,
+    data,
+  );
+}
+
+export function completeAfterSaleApi(id: string, handler?: string) {
+  return requestClient.post<CemeteryAfterSale>(
+    `/cemetery/aftersales/${id}/complete`,
+    { handler },
+  );
+}
+
+export const AFTER_SALE_STATUS: Record<AfterSaleStatus, string> = {
+  completed: '已完成',
+  pending: '待处理',
+  processing: '处理中',
+};
+
+export const AFTER_SALE_TYPE: Record<AfterSaleType, string> = {
+  clean: '保洁祭扫',
+  green: '绿化养护',
+  other: '其他服务',
+  stone: '碑体维修',
+};
+
+// ---------------------------------------------------------------- 维护费缴纳
+
+export interface CemeteryMaintenanceFee {
+  amount: number;
+  cycleYears: number;
+  id: string;
+  method: string;
+  orderId?: string;
+  paidAt: string;
+  plotId: string;
+  receiptNo: string;
+}
+
+// ---------------------------------------------------------------- 格位全档案
+
+export interface PlotArchive {
+  burial?: CemeteryBurial;
+  customer?: CemeteryCustomer;
+  deceased?: CemeteryDeceased;
+  maintenanceFees: CemeteryMaintenanceFee[];
+  payments: CemeteryPayment[];
+  plot: CemeteryPlot;
+  sale?: CemeterySale;
+}
+
+export function getPlotArchiveApi(plotId: string) {
+  return requestClient.get<PlotArchive>(`/cemetery/plots/${plotId}/archive`);
 }

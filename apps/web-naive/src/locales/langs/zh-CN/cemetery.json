@@ -9,5 +9,6 @@
   "customers": "客户管理",
   "sales": "销售管理",
   "deceased": "逝者档案",
-  "burials": "安葬管理"
+  "burials": "安葬管理",
+  "afterSales": "售后管理"
 }
