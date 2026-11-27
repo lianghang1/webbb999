@@ -17,8 +17,14 @@ interface ModalData {
   record?: SysUser;
 }
 
+interface RoleOption {
+  id: string;
+  roleCode: string;
+  roleName: string;
+}
+
 const tenants = ref<SysTenant[]>([]);
-const roles = ref<{ id: string; roleName: string }[]>([]);
+const roles = ref<RoleOption[]>([]);
 const selectedTenantId = ref<null | string>(null);
 const selectedRoles = ref<string[]>([]);
 const loading = ref(false);
@@ -90,7 +96,7 @@ async function onTenantChange(tenantId: null | string) {
   const codes = await userApi.roles(data.record.id, tenantId);
   const codeSet = new Set(codes);
   selectedRoles.value = roles.value
-    .filter((r) => codeSet.has(r.id))
+    .filter((r) => codeSet.has(r.roleCode))
     .map((r) => r.id);
 }
 </script>

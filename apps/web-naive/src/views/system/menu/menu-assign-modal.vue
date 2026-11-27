@@ -18,7 +18,7 @@ interface AssignData {
 }
 
 interface TreeNode {
-  id: string;
+  key: string;
   label: string;
   children?: TreeNode[];
 }
@@ -66,7 +66,17 @@ const [Modal, modalApi] = useVbenModal<AssignData>({
     try {
       const menus = await menuApi.tree();
       treeData.value = toTree(menus);
-      checkedKeys.value = [];
+      const data = assignData.value;
+      if (data.roleId) {
+        checkedKeys.value = await roleApi.menus(
+          data.roleId,
+          data.tenantId ?? '',
+        );
+      } else if (data.packageId) {
+        checkedKeys.value = await packageApi.menus(data.packageId);
+      } else {
+        checkedKeys.value = [];
+      }
     } finally {
       loading.value = false;
     }
@@ -75,7 +85,7 @@ const [Modal, modalApi] = useVbenModal<AssignData>({
 
 function toTree(menus: any[]): TreeNode[] {
   return (menus ?? []).map((m) => ({
-    id: m.id,
+    key: String(m.id),
     label: m.menuName,
     children: m.children?.length ? toTree(m.children) : undefined,
   }));
@@ -93,10 +103,8 @@ function toTree(menus: any[]): TreeNode[] {
           v-model:checked-keys="checkedKeys"
           :data="treeData"
           checkable
-          check-strategy="child"
           block-line
           :default-expand-all="true"
-          virtual-scroll
           :style="{ height: '340px' }"
         />
       </div>

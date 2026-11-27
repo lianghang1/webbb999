@@ -51,6 +51,9 @@ export const tenantApi = {
 /** 套餐管理 */
 export const packageApi = {
   ...crudApi<SysTenantPackage>('/iam/package'),
+  menus(packageId: Id) {
+    return get<Id[]>('/iam/package/menus', { packageId });
+  },
   assignMenus(data: {
     menuIds: Id[];
     packageId?: Id;
@@ -92,6 +95,9 @@ export const deptApi = crudApi<SysDept>('/iam/dept');
 /** 角色管理 */
 export const roleApi = {
   ...crudApi<SysRole>('/iam/role'),
+  menus(roleId: Id, tenantId: string) {
+    return get<Id[]>('/iam/role/menus', { roleId, tenantId });
+  },
   assignMenus(data: {
     menuIds: Id[];
     packageId?: Id;
