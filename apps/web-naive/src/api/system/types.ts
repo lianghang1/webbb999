@@ -169,6 +169,6 @@ export interface SysConfig {
   configValue?: string;
   id: Id;
   remark?: string;
-  sensitive?: boolean;
+  needEncrypt?: boolean;
   valueType?: string;
 }

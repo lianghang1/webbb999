@@ -56,10 +56,10 @@ const [Form, formApi] = useVbenForm({
     {
       component: 'Input',
       componentProps: ({ rootValues }) => ({
-        placeholder: rootValues?.sensitive
+        placeholder: rootValues?.needEncrypt
           ? '敏感参数请在保存后单独设置'
           : '请输入参数值',
-        type: rootValues?.sensitive ? 'password' : 'text',
+        type: rootValues?.needEncrypt ? 'password' : 'text',
       }),
       fieldName: 'configValue',
       label: '参数值',
@@ -80,7 +80,7 @@ const [Form, formApi] = useVbenForm({
     },
     {
       component: 'Switch',
-      fieldName: 'sensitive',
+      fieldName: 'needEncrypt',
       label: '敏感参数',
       defaultValue: false,
     },

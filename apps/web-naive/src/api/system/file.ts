@@ -15,7 +15,7 @@ export interface FileDTO {
   objectId?: string;
   objectType?: string;
   originalFilename?: string;
-  size?: number;
+  fileSize?: number;
   thumbnailUrl?: string;
   url?: string;
 }

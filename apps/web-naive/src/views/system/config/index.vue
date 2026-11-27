@@ -26,10 +26,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       { field: 'configValue', title: '参数值', minWidth: 180 },
       { field: 'valueType', title: '值类型', width: 100 },
       {
-        field: 'sensitive',
+        field: 'needEncrypt',
         title: '敏感',
         width: 80,
-        slots: { default: 'sensitive' },
+        slots: { default: 'needEncrypt' },
       },
       { field: 'remark', title: '备注', minWidth: 140 },
       {
@@ -95,9 +95,9 @@ function onDelete(row: SysConfig) {
           新增参数
         </NButton>
       </template>
-      <template #sensitive="{ row }">
-        <NTag :type="row.sensitive ? 'warning' : 'default'" size="small">
-          {{ row.sensitive ? '是' : '否' }}
+      <template #needEncrypt="{ row }">
+        <NTag :type="row.needEncrypt ? 'warning' : 'default'" size="small">
+          {{ row.needEncrypt ? '是' : '否' }}
         </NTag>
       </template>
       <template #actions="{ row }">

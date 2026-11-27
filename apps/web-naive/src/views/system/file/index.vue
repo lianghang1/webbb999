@@ -20,7 +20,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       { field: 'name', title: '文件名', minWidth: 180 },
       { field: 'originalFilename', title: '原始文件名', minWidth: 180 },
       { field: 'objectType', title: '对象类型', width: 130 },
-      { field: 'size', title: '大小', width: 110 },
+      { field: 'fileSize', title: '大小', width: 110 },
       {
         field: 'url',
         title: '预览',
