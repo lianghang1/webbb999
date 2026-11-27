@@ -44,9 +44,8 @@ export const fileApi = {
         data.append(key, String(value));
       }
     });
-    return requestClient.post<FileDTO>('/file/upload', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // 不手动设置 Content-Type：浏览器需自动生成带 boundary 的 multipart 头
+    return requestClient.post<FileDTO>('/file/upload', data);
   },
   get(id: Id) {
     return get<FileDTO>('/file/get', { id });
@@ -74,9 +73,8 @@ export const fileApi = {
         data.append(key, String(value));
       }
     });
-    return requestClient.post('/file/upload-part', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // 不手动设置 Content-Type：浏览器需自动生成带 boundary 的 multipart 头
+    return requestClient.post('/file/upload-part', data);
   },
   complete(id: Id) {
     return requestClient.post<null>('/file/complete', {
