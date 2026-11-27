@@ -60,12 +60,24 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     return token ? `Bearer ${token}` : null;
   }
 
+  /** 物理设备标识：就地生成并持久化，多点登录按它限流 */
+  function deviceId() {
+    const key = 'matrix_device_id';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = crypto.randomUUID().replaceAll('-', '');
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+
   // 请求头处理
   client.addRequestInterceptor({
     fulfilled: async (config) => {
       const accessStore = useAccessStore();
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
+      config.headers['X-Device-Id'] = deviceId();
       config.headers['Accept-Language'] =
         i18n.global.locale.value || preferences.app.locale;
       return config;

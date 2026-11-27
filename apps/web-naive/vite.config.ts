@@ -8,9 +8,8 @@ export default defineConfig(async () => {
         proxy: {
           '/api': {
             changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api/, ''),
-            // mock代理目标地址
-            target: 'http://localhost:5320/api',
+            // 直连后端 matrix 服务（cemetery-app:8080），后端接口本身带 /api 前缀，不做 rewrite
+            target: 'http://localhost:8080',
             ws: true,
           },
         },

@@ -29,15 +29,36 @@ export const useAuthStore = defineStore('auth', () => {
     params: Recordable<any>,
     onSuccess?: () => Promise<void> | void,
   ) {
-    // 异步处理用户登录操作并获取 accessToken
+    // 异步处理用户登录操作并获取 token
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
 
-      // 如果成功获取到 accessToken
+      // 只透传后端 LoginRequest 认识的字段；滑块验证码首次登录不要求，跳过
+      const loginParams = {
+        username: params.username,
+        password: params.password,
+        authType: 'PASSWORD',
+      };
+      let result = await loginApi(loginParams);
+
+      // 后端两步登录：先返回租户列表，自动选第一个租户完成登录
+      if (result.needSelectTenant) {
+        const first = result.tenants?.[0];
+        if (!first) {
+          throw new Error('账号未开通任何有效租户');
+        }
+        result = await loginApi({
+          ...loginParams,
+          tenantCode: first.tenantCode,
+        });
+      }
+
+      const accessToken = result.token ?? null;
+
+      // 如果成功获取到 token
       if (accessToken) {
-        // 将 accessToken 存储到 accessStore 中
+        // 将 token 存储到 accessStore 中
         accessStore.setAccessToken(accessToken);
 
         // 获取用户信息并存储到 accessStore 中
