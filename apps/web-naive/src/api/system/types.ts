@@ -148,12 +148,13 @@ export interface SysDict {
 }
 
 export interface SysDictOption {
-  dictCode?: string;
+  dictId?: Id;
   id: Id;
-  label: string;
+  optionCode: string;
+  optionLabel: string;
   sortNo?: number;
   status?: number;
-  value: string;
+  tenantId?: Id;
 }
 
 export interface DictOptionValue {
@@ -162,11 +163,12 @@ export interface DictOptionValue {
 }
 
 export interface SysConfig {
+  configGroup?: string;
   configKey: string;
-  configName: string;
+  configName?: string;
   configValue?: string;
-  group?: string;
   id: Id;
   remark?: string;
-  secret?: boolean;
+  sensitive?: boolean;
+  valueType?: string;
 }
