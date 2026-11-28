@@ -1,4 +1,5 @@
 import type {
+  DeptTreeNode,
   Id,
   IdRequest,
   PageResult,
@@ -9,6 +10,7 @@ import type {
   SysTenantPackage,
   SysUser,
   SysUserTenant,
+  UserDetail,
 } from './types';
 
 import { requestClient } from '#/api/request';
@@ -51,6 +53,13 @@ export const tenantApi = {
 /** 套餐管理 */
 export const packageApi = {
   ...crudApi<SysTenantPackage>('/iam/package'),
+  /** 关键表 join 视图（菜单数 + 租户数） */
+  listByPlan(params?: Record<string, any>) {
+    return get<PageResult<SysTenantPackage>>(
+      '/iam/package/list/PackageListPlan',
+      params,
+    );
+  },
   menus(packageId: Id) {
     return get<Id[]>('/iam/package/menus', { packageId });
   },
@@ -67,6 +76,29 @@ export const packageApi = {
 /** 用户管理 */
 export const userApi = {
   ...crudApi<SysUser>('/iam/user'),
+  /**
+   * 用户列表走 QueryPlan 通路：/iam/user/list/UserListPlan
+   * 关联 sys_user_profile(昵称)/sys_dept(部门名)/角色聚合；服务端按当前登录租户隔离。
+   */
+  list(params?: Record<string, any>) {
+    return get<PageResult<SysUser>>('/iam/user/list/UserListPlan', params);
+  },
+  /** 用户详情回显：账号 + 资料 + 归属部门 + 角色 ID（编辑抽屉用） */
+  detail(id: Id, tenantId?: string) {
+    return get<UserDetail>('/iam/user/detail', { id, tenantId });
+  },
+  /** 重置用户密码（管理员动作） */
+  resetPassword(data: { userId: Id; password: string }) {
+    return requestClient.post<null>('/iam/user/reset-password', data);
+  },
+  /** 批量删除（逻辑删除） */
+  deleteBatch(ids: Id[]) {
+    return requestClient.post<null>('/iam/user/delete-batch', { ids });
+  },
+  /** 批量改状态：1启用 0停用 */
+  changeStatus(ids: Id[], status: number) {
+    return requestClient.post<null>('/iam/user/change-status', { ids, status });
+  },
   assignTenant(data: {
     deptId?: Id;
     status?: number;
@@ -90,11 +122,21 @@ export const userApi = {
 };
 
 /** 部门管理 */
-export const deptApi = crudApi<SysDept>('/iam/dept');
+export const deptApi = {
+  ...crudApi<SysDept>('/iam/dept'),
+  /** 部门树（芋道式左侧树）：不传 tenantId 时用当前登录租户 */
+  tree(tenantId?: string) {
+    return get<DeptTreeNode[]>('/iam/dept/tree', { tenantId });
+  },
+};
 
 /** 角色管理 */
 export const roleApi = {
   ...crudApi<SysRole>('/iam/role'),
+  /** 关键表 join 视图（租户名 + 用户数 + 菜单数） */
+  listByPlan(params?: Record<string, any>) {
+    return get<PageResult<SysRole>>('/iam/role/list/RoleListPlan', params);
+  },
   menus(roleId: Id, tenantId: string) {
     return get<Id[]>('/iam/role/menus', { roleId, tenantId });
   },
@@ -105,6 +147,9 @@ export const roleApi = {
     tenantId?: string;
   }) {
     return requestClient.post<null>('/iam/role/assign-menus', data);
+  },
+  changeStatus(data: { ids: Id[]; status: number }) {
+    return requestClient.post<null>('/iam/role/change-status', data);
   },
 };
 

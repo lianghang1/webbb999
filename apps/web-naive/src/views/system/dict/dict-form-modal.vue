@@ -25,43 +25,60 @@ const [Form, formApi] = useVbenForm({
   },
   schema: [
     {
-      component: 'Input',
-      componentProps: { placeholder: '请输入字典编码' },
-      fieldName: 'dictCode',
-      label: '字典编码',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: { placeholder: '请输入字典名称' },
-      fieldName: 'dictName',
-      label: '字典名称',
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        options: [
-          { label: '启用', value: 1 },
-          { label: '停用', value: 0 },
-        ],
-      },
-      defaultValue: 1,
-      fieldName: 'status',
-      label: '状态',
-    },
-    {
-      component: 'Input',
-      componentProps: { placeholder: '备注', type: 'textarea' },
-      fieldName: 'remark',
-      label: '备注',
+      type: 'group',
+      name: 'basic',
+      title: '字典信息',
+      collapsible: false,
+      wrapperClass: 'grid-cols-2',
+      children: [
+        {
+          component: 'Input',
+          componentProps: ({ rootValues }) => ({
+            placeholder: '如 sys_normal_disable',
+            disabled: !!rootValues?.id,
+          }),
+          fieldName: 'dictCode',
+          label: '字典编码',
+          rules: 'required',
+        },
+        {
+          component: 'Input',
+          componentProps: { placeholder: '请输入字典名称' },
+          fieldName: 'dictName',
+          label: '字典名称',
+          rules: 'required',
+        },
+        {
+          component: 'RadioGroup',
+          componentProps: {
+            options: [
+              { label: '启用', value: 1 },
+              { label: '停用', value: 0 },
+            ],
+          },
+          defaultValue: 1,
+          fieldName: 'status',
+          label: '状态',
+        },
+        {
+          component: 'Textarea',
+          componentProps: {
+            placeholder: '请输入备注',
+            autosize: { minRows: 2, maxRows: 4 },
+            class: 'w-full',
+          },
+          fieldName: 'remark',
+          label: '备注',
+          formItemClass: 'col-span-2',
+        },
+      ],
     },
   ],
   showDefaultActions: false,
-  wrapperClass: 'grid-cols-1',
 });
 
 const [Modal, modalApi] = useVbenModal<ModalData>({
+  class: 'w-[560px]',
   fullscreenButton: false,
   onCancel() {
     modalApi.close();
@@ -70,15 +87,14 @@ const [Modal, modalApi] = useVbenModal<ModalData>({
     await formApi.validateAndSubmit();
   },
   onOpenChange(isOpen) {
-    if (!isOpen) {
-      return;
-    }
+    if (!isOpen) return;
     const data = modalApi.getData();
     modalApi.setState({ title: data?.record?.id ? '编辑字典' : '新增字典' });
     if (data?.record) {
       formApi.setValues(data.record);
     } else {
       formApi.resetForm();
+      formApi.setValues({ status: 1 });
     }
   },
 });

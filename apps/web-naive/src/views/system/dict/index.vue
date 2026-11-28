@@ -3,7 +3,7 @@ import type { SysDict } from '#/api/system/types';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 
-import { NButton, NTag } from 'naive-ui';
+import { NButton, NDropdown, NTag } from 'naive-ui';
 
 import { dialog, message } from '#/adapter/naive';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
@@ -15,10 +15,39 @@ import DictOptionModal from './dict-option-modal.vue';
 defineOptions({ name: 'SystemDict' });
 
 interface GridQueryParams {
+  form?: { dictCode?: string; dictName?: string; status?: number };
   page: { currentPage: number; pageSize: number };
 }
 
 const [Grid, gridApi] = useVbenVxeGrid({
+  formOptions: {
+    schema: [
+      {
+        component: 'Input',
+        componentProps: { placeholder: '编码包含…', clearable: true },
+        fieldName: 'dictCode',
+        label: '字典编码',
+      },
+      {
+        component: 'Input',
+        componentProps: { placeholder: '名称包含…', clearable: true },
+        fieldName: 'dictName',
+        label: '字典名称',
+      },
+      {
+        component: 'Select',
+        componentProps: {
+          clearable: true,
+          options: [
+            { label: '启用', value: 1 },
+            { label: '停用', value: 0 },
+          ],
+        },
+        fieldName: 'status',
+        label: '状态',
+      },
+    ],
+  },
   gridOptions: {
     columns: [
       { field: 'dictCode', title: '字典编码', width: 160 },
@@ -29,22 +58,38 @@ const [Grid, gridApi] = useVbenVxeGrid({
         width: 90,
         slots: { default: 'status' },
       },
+      {
+        field: 'createTime',
+        title: '创建时间',
+        width: 155,
+        slots: { default: 'createTime' },
+      },
       { field: 'remark', title: '备注', minWidth: 180 },
       {
         field: 'actions',
         fixed: 'right',
         title: '操作',
-        width: 240,
+        width: 160,
         slots: { default: 'actions' },
       },
     ],
     proxyConfig: {
       ajax: {
-        query: async ({ page }: GridQueryParams) => {
-          const result = await dictApi.list({
+        query: async ({ form, page }: GridQueryParams) => {
+          const params: Record<string, unknown> = {
             pageNum: page.currentPage,
             pageSize: page.pageSize,
-          });
+          };
+          if (form?.dictCode) {
+            params.CN_dictCode = form.dictCode;
+          }
+          if (form?.dictName) {
+            params.CN_dictName = form.dictName;
+          }
+          if (form?.status !== undefined) {
+            params.EQ_status = form.status;
+          }
+          const result = await dictApi.list(params);
           return { items: result.list, total: result.total };
         },
       },
@@ -81,7 +126,7 @@ function openOptions(row: SysDict) {
 function onDelete(row: SysDict) {
   dialog.warning({
     title: '删除确认',
-    content: `确定删除字典「${row.dictName}」吗？`,
+    content: `确定删除字典「${row.dictName}」吗？其下所有字典项将一并失效。`,
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -90,6 +135,20 @@ function onDelete(row: SysDict) {
       gridApi.query();
     },
   });
+}
+
+const rowActionOptions = [
+  { label: '编辑', key: 'edit' },
+  { label: '删除', key: 'delete', danger: true },
+];
+
+function onRowAction(key: string, row: SysDict) {
+  if (key === 'edit') openEdit(row);
+  else if (key === 'delete') onDelete(row);
+}
+
+function formatTime(value?: string) {
+  return value ? value.replace('T', ' ').slice(0, 19) : '—';
 }
 </script>
 
@@ -106,6 +165,9 @@ function onDelete(row: SysDict) {
           {{ row.status === 1 ? '启用' : '停用' }}
         </NTag>
       </template>
+      <template #createTime="{ row }">
+        {{ formatTime(row.createTime) }}
+      </template>
       <template #actions="{ row }">
         <NButton
           size="tiny"
@@ -115,22 +177,12 @@ function onDelete(row: SysDict) {
         >
           字典项
         </NButton>
-        <NButton
-          size="tiny"
-          type="primary"
-          quaternary
-          @click="openEdit(row as SysDict)"
+        <NDropdown
+          :options="rowActionOptions"
+          @select="(key: string) => onRowAction(key, row as SysDict)"
         >
-          编辑
-        </NButton>
-        <NButton
-          size="tiny"
-          type="error"
-          quaternary
-          @click="onDelete(row as SysDict)"
-        >
-          删除
-        </NButton>
+          <NButton size="tiny" quaternary>更多 ▾</NButton>
+        </NDropdown>
       </template>
     </Grid>
     <DictModal />

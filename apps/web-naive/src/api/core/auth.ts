@@ -51,9 +51,25 @@ export namespace AuthApi {
     status: number;
   }
 
-  /** 会话信息 */
+  /** 会话信息（对齐后端 SessionInfo） */
   export interface SessionInfo {
-    [key: string]: any;
+    accountId: string;
+    accountNo: string;
+    accountType: string;
+    attributes?: Record<string, string>;
+    deviceId?: string;
+    displayName: string;
+    loginTime: number;
+    permissions?: string[];
+    roles?: string[];
+    source?: string;
+    tenantId: string;
+  }
+
+  /** 全量在线会话：{token, session} */
+  export interface OnlineSession {
+    session: SessionInfo;
+    token: string;
   }
 }
 
@@ -117,7 +133,7 @@ export async function onlineSessionsApi() {
 
 /** 在线会话（全部，需管理权限） */
 export async function onlineAllApi() {
-  return requestClient.get<Record<string, any>[]>('/auth/online-all');
+  return requestClient.get<AuthApi.OnlineSession[]>('/auth/online-all');
 }
 
 /** 踢下线 */

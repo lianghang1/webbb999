@@ -1,266 +1,321 @@
 <script lang="ts" setup>
-import type {
-  WorkbenchProjectItem,
-  WorkbenchQuickNavItem,
-  WorkbenchTodoItem,
-  WorkbenchTrendItem,
-} from '@vben/common-ui';
-
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import {
-  AnalysisChartCard,
-  WorkbenchHeader,
-  WorkbenchProject,
-  WorkbenchQuickNav,
-  WorkbenchTodo,
-  WorkbenchTrends,
-} from '@vben/common-ui';
-import { preferences } from '@vben/preferences';
+import { IconifyIcon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
-import { openWindow } from '@vben/utils';
 
-import AnalyticsVisitsSource from '../analytics/analytics-visits-source.vue';
+import { NButton, NCard, NGi, NGrid, NSpin, NTag } from 'naive-ui';
 
-const userStore = useUserStore();
+import { auditApi, fileApi, menuApi, roleApi, tenantApi, userApi } from '#/api';
 
-// 这是一个示例数据，实际项目中需要根据实际情况进行调整
-// url 也可以是内部路由，在 navTo 方法中识别处理，进行内部跳转
-// 例如：url: /dashboard/workspace
-const projectItems: WorkbenchProjectItem[] = [
-  {
-    color: '',
-    content: '不要等待机会，而要创造机会。',
-    date: '2021-04-01',
-    group: '开源组',
-    icon: 'carbon:logo-github',
-    title: 'Github',
-    url: 'https://github.com',
-  },
-  {
-    color: '#3fb27f',
-    content: '现在的你决定将来的你。',
-    date: '2021-04-01',
-    group: '算法组',
-    icon: 'ion:logo-vue',
-    title: 'Vue',
-    url: 'https://vuejs.org',
-  },
-  {
-    color: '#e18525',
-    content: '没有什么才能比努力更重要。',
-    date: '2021-04-01',
-    group: '上班摸鱼',
-    icon: 'ion:logo-html5',
-    title: 'Html5',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/HTML',
-  },
-  {
-    color: '#bf0c2c',
-    content: '热情和欲望可以突破一切难关。',
-    date: '2021-04-01',
-    group: 'UI',
-    icon: 'ion:logo-angular',
-    title: 'Angular',
-    url: 'https://angular.io',
-  },
-  {
-    color: '#00d8ff',
-    content: '健康的身体是实现目标的基石。',
-    date: '2021-04-01',
-    group: '技术牛',
-    icon: 'bx:bxl-react',
-    title: 'React',
-    url: 'https://reactjs.org',
-  },
-  {
-    color: '#EBD94E',
-    content: '路是走出来的，而不是空想出来的。',
-    date: '2021-04-01',
-    group: '架构组',
-    icon: 'ion:logo-javascript',
-    title: 'Js',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/JavaScript',
-  },
-];
-
-// 同样，这里的 url 也可以使用以 http 开头的外部链接
-const quickNavItems: WorkbenchQuickNavItem[] = [
-  {
-    color: '#1fdaca',
-    icon: 'ion:home-outline',
-    title: '首页',
-    url: '/',
-  },
-  {
-    color: '#bf0c2c',
-    icon: 'ion:grid-outline',
-    title: '仪表盘',
-    url: '/dashboard',
-  },
-  {
-    color: '#e18525',
-    icon: 'ion:layers-outline',
-    title: '组件',
-    url: '/demos/features/icons',
-  },
-  {
-    color: '#3fb27f',
-    icon: 'ion:settings-outline',
-    title: '系统管理',
-    url: '/demos/features/login-expired', // 这里的 URL 是示例，实际项目中需要根据实际情况进行调整
-  },
-  {
-    color: '#4daf1bc9',
-    icon: 'ion:key-outline',
-    title: '权限管理',
-    url: '/demos/access/page-control',
-  },
-  {
-    color: '#00d8ff',
-    icon: 'ion:bar-chart-outline',
-    title: '图表',
-    url: '/analytics',
-  },
-];
-
-const todoItems = ref<WorkbenchTodoItem[]>([
-  {
-    completed: false,
-    content: `审查最近提交到Git仓库的前端代码，确保代码质量和规范。`,
-    date: '2024-07-30 11:00:00',
-    title: '审查前端代码提交',
-  },
-  {
-    completed: true,
-    content: `检查并优化系统性能，降低CPU使用率。`,
-    date: '2024-07-30 11:00:00',
-    title: '系统性能优化',
-  },
-  {
-    completed: false,
-    content: `进行系统安全检查，确保没有安全漏洞或未授权的访问。 `,
-    date: '2024-07-30 11:00:00',
-    title: '安全检查',
-  },
-  {
-    completed: false,
-    content: `更新项目中的所有npm依赖包，确保使用最新版本。`,
-    date: '2024-07-30 11:00:00',
-    title: '更新项目依赖',
-  },
-  {
-    completed: false,
-    content: `修复用户报告的页面UI显示问题，确保在不同浏览器中显示一致。 `,
-    date: '2024-07-30 11:00:00',
-    title: '修复UI显示问题',
-  },
-]);
-const trendItems: WorkbenchTrendItem[] = [
-  {
-    avatar: 'svg:avatar-1',
-    content: `在 <a>开源组</a> 创建了项目 <a>Vue</a>`,
-    date: '刚刚',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-2',
-    content: `关注了 <a>威廉</a> `,
-    date: '1个小时前',
-    title: '艾文',
-  },
-  {
-    avatar: 'svg:avatar-3',
-    content: `发布了 <a>个人动态</a> `,
-    date: '1天前',
-    title: '克里斯',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `发表文章 <a>如何编写一个Vite插件</a> `,
-    date: '2天前',
-    title: 'Vben',
-  },
-  {
-    avatar: 'svg:avatar-1',
-    content: `回复了 <a>杰克</a> 的问题 <a>如何进行项目优化？</a>`,
-    date: '3天前',
-    title: '皮特',
-  },
-  {
-    avatar: 'svg:avatar-2',
-    content: `关闭了问题 <a>如何运行项目</a> `,
-    date: '1周前',
-    title: '杰克',
-  },
-  {
-    avatar: 'svg:avatar-3',
-    content: `发布了 <a>个人动态</a> `,
-    date: '1周前',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `推送了代码到 <a>Github</a>`,
-    date: '2021-04-01 20:00',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `发表文章 <a>如何编写使用 Admin Vben</a> `,
-    date: '2021-03-01 20:00',
-    title: 'Vben',
-  },
-];
+defineOptions({ name: 'DashboardWorkspace' });
 
 const router = useRouter();
+const userStore = useUserStore();
 
-// 这是一个示例方法，实际项目中需要根据实际情况进行调整
-// This is a sample method, adjust according to the actual project requirements
-function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
-  if (nav.url?.startsWith('http')) {
-    openWindow(nav.url);
-    return;
+const isPlatformAdmin = computed(() =>
+  (userStore.userInfo?.roles ?? []).includes('PLATFORM_ADMIN'),
+);
+const userInfoName = computed(
+  () => userStore.userInfo?.realName || userStore.userInfo?.username || '用户',
+);
+
+/** 系统数据概览：各模块 list 的 total */
+const stats = ref<
+  { label: string; value: number; icon: string; color: string; route: string }[]
+>([]);
+const statsLoading = ref(true);
+
+/** 最近登录记录 */
+const recentLogins = ref<
+  { username: string; success: boolean; loginTime: string; ip: string }[]
+>([]);
+
+/** 系统快捷入口（真实路由） */
+const shortcuts = computed(() => {
+  const base = [
+    {
+      title: '用户管理',
+      desc: '账号与资料、部门归属',
+      icon: 'carbon:user-multiple',
+      color: '#2080f0',
+      route: '/system/user',
+    },
+    {
+      title: '角色管理',
+      desc: '角色与数据权限',
+      icon: 'carbon:user-role',
+      color: '#8a2be2',
+      route: '/system/role',
+    },
+    {
+      title: '菜单管理',
+      desc: '菜单与 URL 权限',
+      icon: 'carbon:menu',
+      color: '#18a058',
+      route: '/system/menu',
+    },
+    {
+      title: '部门管理',
+      desc: '组织架构维护',
+      icon: 'carbon:tree-view',
+      color: '#f0a020',
+      route: '/system/dept',
+    },
+    {
+      title: '字典管理',
+      desc: '数据字典维护',
+      icon: 'carbon:book',
+      color: '#d03050',
+      route: '/system/dict',
+    },
+    {
+      title: '参数配置',
+      desc: '系统参数与敏感配置',
+      icon: 'carbon:settings',
+      color: '#4098fc',
+      route: '/system/config',
+    },
+    {
+      title: '文件管理',
+      desc: '文件上传与访问',
+      icon: 'carbon:document',
+      color: '#0ca678',
+      route: '/system/file',
+    },
+    {
+      title: '审计日志',
+      desc: '登录与操作审计',
+      icon: 'carbon:activity',
+      color: '#7048e8',
+      route: '/audit',
+    },
+  ];
+  return isPlatformAdmin.value
+    ? [
+        {
+          title: '租户管理',
+          desc: '租户与开通管理',
+          icon: 'carbon:enterprise',
+          color: '#e8590c',
+          route: '/system/tenant',
+        },
+        {
+          title: '套餐管理',
+          desc: '套餐与菜单授权',
+          icon: 'carbon:package',
+          color: '#1098ad',
+          route: '/system/package',
+        },
+        ...base,
+      ]
+    : base;
+});
+
+async function loadData() {
+  statsLoading.value = true;
+  try {
+    // 并行拉取各模块总数（pageSize=1 只为拿 total）
+    const [users, roles, menus, files] = await Promise.all([
+      userApi.list({ pageNum: 1, pageSize: 1 }),
+      roleApi.list({ pageNum: 1, pageSize: 1 }),
+      menuApi.list({ pageNum: 1, pageSize: 1 }),
+      fileApi.list({ pageNum: 1, pageSize: 1 }),
+    ]);
+    const items = [
+      {
+        label: '用户数',
+        value: users.total,
+        icon: 'carbon:user-multiple',
+        color: '#2080f0',
+        route: '/system/user',
+      },
+      {
+        label: '角色数',
+        value: roles.total,
+        icon: 'carbon:user-role',
+        color: '#8a2be2',
+        route: '/system/role',
+      },
+      {
+        label: '菜单数',
+        value: menus.total,
+        icon: 'carbon:menu',
+        color: '#18a058',
+        route: '/system/menu',
+      },
+      {
+        label: '文件数',
+        value: files.total,
+        icon: 'carbon:document',
+        color: '#f0a020',
+        route: '/system/file',
+      },
+    ];
+    if (isPlatformAdmin.value) {
+      const tenants = await tenantApi.list({ pageNum: 1, pageSize: 1 });
+      items.push({
+        label: '租户数',
+        value: tenants.total,
+        icon: 'carbon:enterprise',
+        color: '#e8590c',
+        route: '/system/tenant',
+      });
+    }
+    stats.value = items;
+
+    // 最近 5 条登录记录
+    const logs = await auditApi.loginLogs({ pageNum: 1, pageSize: 5 });
+    recentLogins.value = logs.list.map((l) => ({
+      username: l.username || '—',
+      success: !!l.success,
+      loginTime: l.loginTime || '',
+      ip: l.ip || '—',
+    }));
+  } finally {
+    statsLoading.value = false;
   }
-  if (nav.url?.startsWith('/')) {
-    router.push(nav.url).catch((error) => {
-      console.error('Navigation failed:', error);
-    });
-  } else {
-    console.warn(`Unknown URL for navigation item: ${nav.title} -> ${nav.url}`);
-  }
+}
+
+onMounted(loadData);
+
+function formatTime(value?: string) {
+  return value ? value.replace('T', ' ').slice(0, 19) : '—';
+}
+
+function greet() {
+  const h = new Date().getHours();
+  if (h < 6) return '夜深了';
+  if (h < 12) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  return '晚上好';
 }
 </script>
 
 <template>
   <div class="p-5">
-    <WorkbenchHeader
-      :avatar="userStore.userInfo?.avatar || preferences.app.defaultAvatar"
-    >
-      <template #title>
-        早安, {{ userStore.userInfo?.realName }}, 开始您一天的工作吧！
-      </template>
-      <template #description> 今日晴，20℃ - 32℃！ </template>
-    </WorkbenchHeader>
+    <!-- 欢迎卡片 -->
+    <NCard class="mb-4" :bordered="false">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div
+            class="flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold text-white"
+            style="background: linear-gradient(135deg, #2080f0, #7048e8)"
+          >
+            {{ userInfoName.charAt(0) }}
+          </div>
+          <div>
+            <div class="text-xl font-semibold">
+              {{ greet() }}，{{ userInfoName }}
+            </div>
+            <div
+              class="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+            >
+              <span>欢迎使用后台管理系统</span>
+              <NTag
+                size="small"
+                :bordered="false"
+                :type="isPlatformAdmin ? 'warning' : 'info'"
+              >
+                {{ isPlatformAdmin ? '平台管理员' : '租户用户' }}
+              </NTag>
+            </div>
+          </div>
+        </div>
+        <NButton size="small" quaternary @click="router.push('/system/user')">
+          前往用户管理 →
+        </NButton>
+      </div>
+    </NCard>
 
-    <div class="mt-5 flex flex-col lg:flex-row">
-      <div class="mr-4 w-full lg:w-3/5">
-        <WorkbenchProject :items="projectItems" title="项目" @click="navTo" />
-        <WorkbenchTrends :items="trendItems" class="mt-5" title="最新动态" />
-      </div>
-      <div class="w-full lg:w-2/5">
-        <WorkbenchQuickNav
-          :items="quickNavItems"
-          class="mt-5 lg:mt-0"
-          title="快捷导航"
-          @click="navTo"
-        />
-        <WorkbenchTodo :items="todoItems" class="mt-5" title="待办事项" />
-        <AnalysisChartCard class="mt-5" title="访问来源">
-          <AnalyticsVisitsSource />
-        </AnalysisChartCard>
-      </div>
+    <!-- 系统数据概览 -->
+    <NSpin :show="statsLoading">
+      <NGrid
+        :cols="4"
+        :x-gap="16"
+        :y-gap="16"
+        responsive="screen"
+        item-responsive
+      >
+        <NGi v-for="s in stats" :key="s.label" span="m:1 s:2">
+          <NCard
+            :bordered="false"
+            class="cursor-pointer transition-shadow hover:shadow-md"
+            @click="router.push(s.route)"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="flex h-11 w-11 items-center justify-center rounded-lg text-white"
+                :style="{ backgroundColor: s.color }"
+              >
+                <IconifyIcon :icon="s.icon" width="22" height="22" />
+              </div>
+              <div>
+                <div class="text-2xl font-semibold">{{ s.value }}</div>
+                <div class="text-xs text-muted-foreground">{{ s.label }}</div>
+              </div>
+            </div>
+          </NCard>
+        </NGi>
+      </NGrid>
+    </NSpin>
+
+    <!-- 快捷入口 + 最近登录 -->
+    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <NCard title="快捷入口" :bordered="false" class="lg:col-span-2">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <button
+            v-for="q in shortcuts"
+            :key="q.route"
+            class="flex items-start gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
+            @click="router.push(q.route)"
+          >
+            <IconifyIcon
+              :icon="q.icon"
+              width="22"
+              height="22"
+              :style="{ color: q.color }"
+            />
+            <div class="min-w-0">
+              <div class="text-sm font-medium">{{ q.title }}</div>
+              <div class="truncate text-xs text-muted-foreground">
+                {{ q.desc }}
+              </div>
+            </div>
+          </button>
+        </div>
+      </NCard>
+
+      <NCard title="最近登录" :bordered="false">
+        <div v-if="recentLogins.length" class="flex flex-col gap-3">
+          <div
+            v-for="(log, idx) in recentLogins"
+            :key="idx"
+            class="flex items-start justify-between gap-2 border-b border-border pb-2 last:border-0 last:pb-0"
+          >
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="font-medium">{{ log.username }}</span>
+                <NTag
+                  size="tiny"
+                  :bordered="false"
+                  :type="log.success ? 'success' : 'error'"
+                >
+                  {{ log.success ? '成功' : '失败' }}
+                </NTag>
+              </div>
+              <div class="mt-0.5 text-xs text-muted-foreground">
+                {{ formatTime(log.loginTime) }} · {{ log.ip }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="py-6 text-center text-sm text-muted-foreground">
+          暂无登录记录
+        </div>
+      </NCard>
     </div>
   </div>
 </template>

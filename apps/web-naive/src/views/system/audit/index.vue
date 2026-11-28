@@ -15,11 +15,18 @@ const activeTab = ref('login');
 
 <template>
   <Page auto-content-height title="审计日志">
-    <NTabs v-model:value="activeTab" type="line" animated>
-      <NTabPane name="login" tab="登录日志">
+    <NTabs
+      v-model:value="activeTab"
+      type="line"
+      animated
+      class="h-full flex-col"
+      :pane-wrapper-style="{ flex: 1, minHeight: 0 }"
+      pane-class="h-full"
+    >
+      <NTabPane name="login" tab="登录日志" :pane-style="{ height: '100%' }">
         <LoginLog v-if="activeTab === 'login'" />
       </NTabPane>
-      <NTabPane name="operate" tab="操作日志">
+      <NTabPane name="operate" tab="操作日志" :pane-style="{ height: '100%' }">
         <OperateLog v-if="activeTab === 'operate'" />
       </NTabPane>
     </NTabs>

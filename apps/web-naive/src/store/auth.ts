@@ -10,7 +10,14 @@ import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 import { defineStore } from 'pinia';
 
 import { notification } from '#/adapter/naive';
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import {
+  enterTenantApi,
+  getAccessCodesApi,
+  getUserInfoApi,
+  loginApi,
+  logoutApi,
+  switchTenantApi,
+} from '#/api';
 import { $t } from '#/locales';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -99,6 +106,42 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
+  /**
+   * 切换当前租户（switch）或平台超管进入业务租户（enter）。
+   * 后端返回全新 token 与权限集合，前端整体替换并刷新页面以重建菜单路由。
+   */
+  async function switchTenant(
+    tenantCode: string,
+    mode: 'enter' | 'switch' = 'switch',
+  ) {
+    loginLoading.value = true;
+    try {
+      const result =
+        mode === 'enter'
+          ? await enterTenantApi({ tenantCode })
+          : await switchTenantApi({ tenantCode });
+      if (!result.token) {
+        throw new Error('租户切换失败：未获取到访问令牌');
+      }
+      accessStore.setAccessToken(result.token);
+      const [info, accessCodes] = await Promise.all([
+        fetchUserInfo(),
+        getAccessCodesApi(),
+      ]);
+      accessStore.setAccessCodes(accessCodes);
+      notification.success({
+        content: `已进入租户 ${tenantCode}`,
+        description: info.realName,
+        duration: 2500,
+      });
+      // 权限与菜单随租户变化，整页刷新以重建路由
+      window.location.reload();
+      return info;
+    } finally {
+      loginLoading.value = false;
+    }
+  }
+
   async function logout(redirect: boolean = true) {
     try {
       await logoutApi();
@@ -142,5 +185,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserInfo,
     loginLoading,
     logout,
+    switchTenant,
   };
 });

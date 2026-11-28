@@ -3,6 +3,7 @@ import type {
   Id,
   IdRequest,
   PageResult,
+  SecretCipher,
   SysConfig,
   SysDict,
   SysDictOption,
@@ -65,18 +66,32 @@ export const configApi = {
   get(id: Id) {
     return get<null | SysConfig>('/config/get', { id });
   },
-  save(data: Partial<SysConfig>) {
-    return requestClient.post<SysConfig>('/config/save', data);
-  },
-  create(data: Partial<SysConfig>) {
+  /** 新增：对齐 ConfigCreateRequest */
+  create(data: {
+    configGroup?: string;
+    configKey: string;
+    configValue: string;
+    needEncrypt?: boolean;
+    remark?: string;
+    tenantId?: Id;
+    valueType?: string;
+  }) {
     return requestClient.post<SysConfig>('/config/create', data);
   },
-  update(data: Partial<SysConfig>) {
+  /** 修改基础信息（不触碰敏感值/加密标志） */
+  update(data: {
+    configValue?: string;
+    id: Id;
+    remark?: string;
+    valueType?: string;
+  }) {
     return requestClient.post<SysConfig>('/config/update', data);
   },
-  setSecret(data: { id: Id; secretValue: string }) {
+  /** 敏感参数唯一写入口：字段名必须与 ConfigSecretRequest 一致 */
+  setSecret(data: { configValue?: string; id: Id; needEncrypt?: boolean }) {
     return requestClient.post<SysConfig>('/config/secret', data);
   },
+  /** 敏感参数明文读取（独立权限 + 审计） */
   getSecretPlain(id: Id) {
     return get<string>('/config/secret', { id });
   },
@@ -85,8 +100,12 @@ export const configApi = {
       id,
     } satisfies IdRequest);
   },
-  value(configKey: string, defaultValue?: string) {
-    return get<any>('/config/value', { configKey, defaultValue });
+  /** 单值取值；敏感值返回密文对象 */
+  value(configKey: string, group?: string) {
+    return get<null | SecretCipher | string>('/config/value', {
+      configKey,
+      group,
+    });
   },
   values(group?: string) {
     return get<SysConfig[]>('/config/values', { group });

@@ -65,7 +65,8 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     const key = 'matrix_device_id';
     let id = localStorage.getItem(key);
     if (!id) {
-      id = crypto.randomUUID().replaceAll('-', '');
+      // HTTP 明文（非安全上下文）下 crypto.randomUUID 不可用，用时间戳+随机数生成
+      id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
       localStorage.setItem(key, id);
     }
     return id;

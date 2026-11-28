@@ -25,43 +25,61 @@ const [Form, formApi] = useVbenForm({
   },
   schema: [
     {
-      component: 'Input',
-      componentProps: { placeholder: '请输入套餐编码' },
-      fieldName: 'packageCode',
-      label: '套餐编码',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: { placeholder: '请输入套餐名称' },
-      fieldName: 'packageName',
-      label: '套餐名称',
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        options: [
-          { label: '启用', value: 1 },
-          { label: '停用', value: 0 },
-        ],
-      },
-      defaultValue: 1,
-      fieldName: 'status',
-      label: '状态',
-    },
-    {
-      component: 'Input',
-      componentProps: { placeholder: '备注', type: 'textarea' },
-      fieldName: 'remark',
-      label: '备注',
+      type: 'group',
+      name: 'basic',
+      title: '套餐信息',
+      collapsible: false,
+      wrapperClass: 'grid-cols-2',
+      children: [
+        {
+          component: 'Input',
+          componentProps: ({ rootValues }) => ({
+            placeholder: '如 standard',
+            disabled: !!rootValues?.id,
+          }),
+          fieldName: 'packageCode',
+          label: '套餐编码',
+          rules: 'required',
+        },
+        {
+          component: 'Input',
+          componentProps: { placeholder: '请输入套餐名称' },
+          fieldName: 'packageName',
+          label: '套餐名称',
+          rules: 'required',
+        },
+        {
+          component: 'RadioGroup',
+          componentProps: {
+            options: [
+              { label: '启用', value: 1 },
+              { label: '停用', value: 0 },
+            ],
+          },
+          defaultValue: 1,
+          fieldName: 'status',
+          label: '状态',
+          help: '停用后新租户不可再选此套餐',
+        },
+        {
+          component: 'Textarea',
+          componentProps: {
+            placeholder: '请输入备注',
+            autosize: { minRows: 2, maxRows: 4 },
+            class: 'w-full',
+          },
+          fieldName: 'remark',
+          label: '备注',
+          formItemClass: 'col-span-2',
+        },
+      ],
     },
   ],
   showDefaultActions: false,
-  wrapperClass: 'grid-cols-1',
 });
 
 const [Modal, modalApi] = useVbenModal<ModalData>({
+  class: 'w-[560px]',
   fullscreenButton: false,
   onCancel() {
     modalApi.close();
@@ -79,6 +97,7 @@ const [Modal, modalApi] = useVbenModal<ModalData>({
       formApi.setValues(data.record);
     } else {
       formApi.resetForm();
+      formApi.setValues({ status: 1 });
     }
   },
 });

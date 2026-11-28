@@ -65,6 +65,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/system/file/index.vue'),
         meta: { icon: 'lucide:file', title: '文件管理' },
       },
+      {
+        name: 'SystemOnline',
+        path: 'online',
+        component: () => import('#/views/system/online/index.vue'),
+        meta: { icon: 'lucide:monitor', title: '在线会话' },
+      },
     ],
   },
   {

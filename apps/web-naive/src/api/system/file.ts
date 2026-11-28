@@ -7,17 +7,35 @@ function get<T>(url: string, params?: Record<string, any>) {
   return requestClient.get<T>(url, { params });
 }
 
-/** 文件 DTO（对齐后端 FileDTO） */
+/** 文件 DTO（对齐后端 FileDTO 实际字段） */
 export interface FileDTO {
-  configId?: Id;
+  contentType?: string;
+  fileSize?: number;
+  fileType?: string;
+  filename?: string;
   id: Id;
-  name?: string;
+  md5?: string;
   objectId?: string;
   objectType?: string;
   originalFilename?: string;
-  fileSize?: number;
-  thumbnailUrl?: string;
+  rawThumbUrl?: string;
+  rawUrl?: string;
+  thumbUrl?: string;
   url?: string;
+}
+
+/** 分片会话初始化结果（后端 MultipartInitResult） */
+export interface MultipartInitResult {
+  fileId: Id;
+  uploadId: string;
+}
+
+/** 分片记录（后端 SysFilePart） */
+export interface SysFilePart {
+  eTag?: string;
+  id: Id;
+  partNumber: number;
+  partSize?: number;
 }
 
 export interface FileUploadForm {
@@ -62,19 +80,25 @@ export const fileApi = {
       configId,
     });
   },
-  initiate(data: Record<string, any>) {
-    return requestClient.post('/file/initiate', data);
+  initiate(data: {
+    channelCode?: string;
+    configId?: string;
+    fileSize: number;
+    metadata?: Record<string, string>;
+    module?: string;
+    objectId?: string;
+    objectType?: string;
+    originalFilename: string;
+  }) {
+    return requestClient.post<MultipartInitResult>('/file/initiate', data);
   },
-  uploadPart(file: File, part: Record<string, any>) {
+  uploadPart(file: File, part: { fileId: Id; partNumber: number }) {
     const data = new FormData();
     data.append('file', file);
-    Object.entries(part).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        data.append(key, String(value));
-      }
-    });
+    data.append('fileId', part.fileId);
+    data.append('partNumber', String(part.partNumber));
     // 不手动设置 Content-Type：浏览器需自动生成带 boundary 的 multipart 头
-    return requestClient.post('/file/upload-part', data);
+    return requestClient.post<SysFilePart>('/file/upload-part', data);
   },
   complete(id: Id) {
     return requestClient.post<null>('/file/complete', {
@@ -85,6 +109,6 @@ export const fileApi = {
     return requestClient.post<null>('/file/abort', { id } satisfies IdRequest);
   },
   parts(fileId: Id) {
-    return get<any[]>('/file/parts', { fileId });
+    return get<SysFilePart[]>('/file/parts', { fileId });
   },
 };

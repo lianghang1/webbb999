@@ -23,6 +23,9 @@ setupVbenVxeTable({
         columnConfig: {
           resizable: true,
         },
+        // 配合 Page auto-content-height：让 Grid 撑满内容区，表格体自适应
+        // vxe-table 在 height='auto' 时按父容器高度计算表格体高度
+        height: 'auto',
         minHeight: 180,
         formConfig: {
           // 全局禁用vxe-table的表单配置，使用formOptions

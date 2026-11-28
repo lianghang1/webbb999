@@ -22,7 +22,7 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
-import ParkSwitcher from './components/park-switcher.vue';
+// 公墓园区切换器暂不启用：公墓业务不在本阶段范围，且后端未提供 parks/list 接口
 
 const notifications = ref<NotificationItem[]>([
   {
@@ -225,9 +225,7 @@ watch(
     @clear-preferences-and-logout="handleLogout"
     @logout="handleLogout"
   >
-    <template #header-right-1>
-      <ParkSwitcher />
-    </template>
+    <!-- 公墓园区切换器暂不启用（公墓业务不在本阶段范围） -->
     <template #user-dropdown>
       <UserDropdown
         :avatar
